@@ -1,115 +1,174 @@
-import { useState } from "react"
+// src/components/TaskModal.jsx
+import { useEffect, useState } from "react"
+
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "in-progress", label: "In progress" },
+  { value: "completed", label: "Completed" },
+]
+
+const TYPE_OPTIONS = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+]
 
 export default function TaskModal({ task, onClose, onSave }) {
-  const [form, setForm] = useState({
-    title: task?.title || "",
-    description: task?.description || "",
-    type: task?.type || "Daily",
-    status: task?.status || "Pending",
-    due_date: task?.due_date ? task.due_date.split("T")[0] : "",
-  })
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [type, setType] = useState("daily")
+  const [status, setStatus] = useState("pending")
+  const [startDate, setStartDate] = useState("")
+  const [dueDate, setDueDate] = useState("")
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+  useEffect(() => {
+    if (!task) return
+    setTitle(task.title ?? "")
+    setDescription(task.description ?? "")
+    setType((task.type || "daily").toLowerCase())
+    const normalizedStatus = (task.status || "pending").toLowerCase()
+    setStatus(
+      ["pending", "in-progress", "completed"].includes(normalizedStatus)
+        ? normalizedStatus
+        : "pending"
+    )
+
+    // normalize start and due dates
+    const toISODate = (dateString) => {
+      if (!dateString) return ""
+      const d = new Date(dateString)
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, "0")
+      const dd = String(d.getDate()).padStart(2, "0")
+      return `${yyyy}-${mm}-${dd}`
+    }
+
+    setStartDate(toISODate(task.start_date))
+    setDueDate(toISODate(task.due_date))
+  }, [task])
+
+  function handleSave() {
+    if (!title.trim()) return
+
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      type,
+      status,
+      start_date: startDate || null,
+      due_date: dueDate || null,
+    }
+
+    onSave?.(payload)
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    onSave(form)
-  }
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") onClose?.()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h2 className="text-lg font-semibold mb-4">Edit task</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title */}
+      {/* Dialog */}
+      <div className="relative z-10 w-full max-w-xl rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/10 dark:bg-gray-900 dark:ring-white/10">
+        <h2 className="text-xl font-semibold mb-4">Edit task</h2>
+
+        {/* Title */}
+        <label className="block text-sm font-medium mb-1">Title</label>
+        <input
+          className="w-full mb-3 rounded-xl border-0 ring-1 ring-black/10 px-3 py-2 bg-white dark:bg-gray-800 dark:ring-white/10"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Task title"
+        />
+
+        {/* Description */}
+        <label className="block text-sm font-medium mb-1">Description</label>
+        <textarea
+          className="w-full mb-3 rounded-xl border-0 ring-1 ring-black/10 px-3 py-2 bg-white dark:bg-gray-800 dark:ring-white/10"
+          rows={4}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Notes, links, etc."
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Type */}
           <div>
-            <label className="block text-sm font-medium mb-1">Title</label>
+            <label className="block text-sm font-medium mb-1">Type</label>
+            <select
+              className="w-full rounded-xl border-0 ring-1 ring-black/10 px-3 py-2 bg-white dark:bg-gray-800 dark:ring-white/10"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+            >
+              {TYPE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Status</label>
+            <select
+              className="w-full rounded-xl border-0 ring-1 ring-black/10 px-3 py-2 bg-white dark:bg-gray-800 dark:ring-white/10"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              {STATUS_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Start & Due Dates */}
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Start date</label>
             <input
-              type="text"
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              className="w-full rounded-lg border px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
-              required
+              type="date"
+              className="w-full rounded-xl border-0 ring-1 ring-black/10 px-3 py-2 bg-white dark:bg-gray-800 dark:ring-white/10"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
             />
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              className="w-full rounded-lg border px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
-              rows="3"
-            />
-          </div>
-
-          {/* Type & Status */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Type</label>
-              <select
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                className="w-full rounded-lg border px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
-              >
-                <option>Daily</option>
-                <option>Weekly</option>
-                <option>Monthly</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Status</label>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className="w-full rounded-lg border px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
-              >
-                <option>Pending</option>
-                <option>In Progress</option>
-                <option>Completed</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Due Date */}
           <div>
             <label className="block text-sm font-medium mb-1">Due date</label>
             <input
               type="date"
-              name="due_date"
-              value={form.due_date}
-              onChange={handleChange}
-              className="w-full rounded-lg border px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700"
+              className="w-full rounded-xl border-0 ring-1 ring-black/10 px-3 py-2 bg-white dark:bg-gray-800 dark:ring-white/10"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
             />
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 mt-4">
-            <button
-              type="button"
-              onClick={onClose}  
-              className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700"
-            >
-              Save
-            </button>
-          </div>
-        </form>
+        {/* Buttons */}
+        <div className="mt-5 flex justify-end gap-3">
+          <button
+            className="px-4 py-2 rounded-xl ring-1 ring-black/10 bg-white dark:bg-gray-800 dark:ring-white/10"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98]"
+            onClick={handleSave}
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>
   )
