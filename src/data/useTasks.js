@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase"
 const ALLOWED_KEYS = [
   "title",
   "description",
-  "type",          // <-- make sure this key is included
+  "type",
   "status",
   "start_date",
   "due_date",
@@ -79,6 +79,8 @@ export function useTasks(userId) {
     status: (input.status || "pending").toLowerCase(),
     start_date: input.start_date || nowISO,
     due_date: input.due_date || null,
+    priority: (input.priority || "medium").toLowerCase(),    
+    completed_at: input.completed_at || null, 
     // 🔥 Removed priority, tags, recurrence — not in DB
   }
 
@@ -103,6 +105,7 @@ export function useTasks(userId) {
       // keep values canonical
       type: updates.type ? String(updates.type).toLowerCase() : undefined,
       status: updates.status ? String(updates.status).toLowerCase() : undefined,
+      priority: updates.priority ? String(updates.priority).toLowerCase() : undefined, 
     })
 
     const { data, error } = await supabase

@@ -15,6 +15,19 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete }) {
       ? 'bg-yellow-50 text-yellow-800'
       : 'bg-gray-100 text-gray-700'
 
+  {task.priority && (
+  <span className={
+    "text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide " +
+    (task.priority === "high"
+      ? "bg-rose-50 text-rose-700"
+      : task.priority === "low"
+      ? "bg-sky-50 text-sky-700"
+      : "bg-amber-50 text-amber-700")
+  }>
+    {task.priority}
+  </span>
+  )}    
+
   return (
     <div className="p-4 sm:p-5 rounded-2xl shadow-md ring-1 ring-black/5 bg-white/95 backdrop-blur
                     hover:shadow-lg hover:-translate-y-[1px] transition-transform
